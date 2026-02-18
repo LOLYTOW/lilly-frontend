@@ -1,0 +1,147 @@
+/* الأساس */
+body {
+  margin: 0;
+  background: #0a0a0b;
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif;
+
+  height: 100dvh;
+  min-height: 100dvh;
+
+  display: flex;
+  flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* الهيدر */
+.top-header {
+  position: sticky;
+  top: 0;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  backdrop-filter: blur(10px);
+  z-index: 10;
+}
+
+.title-block {
+  text-align: center;
+}
+
+.name {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.sub {
+  font-size: 13px;
+  color: #9aa0a6;
+}
+
+
+/* منطقة الدردشة */
+#chat {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  scroll-padding-bottom: 150px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+
+/* فقاعات الرسائل */
+.message {
+  max-width: 78%;
+  padding: 12px 16px;
+  margin: 8px 0;
+  border-radius: 18px;
+  font-size: 16px;
+  line-height: 1.5;
+  animation: fadeSlide 0.25s ease;
+}
+
+.user {
+  background: white;
+  color: black;
+  margin-left: auto;
+  border-bottom-right-radius: 4px;
+  animation: fromRight 0.25s ease;
+}
+
+.lilly {
+  background: #D81B60;
+  color: white;
+  border-bottom-left-radius: 4px;
+  animation: fromLeft 0.25s ease;
+}
+
+
+/* الحركات */
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fromRight {
+  from { transform: translateX(40px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fromLeft {
+  from { transform: translateX(-40px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+
+/* مؤشر الكتابة */
+.typing {
+  display: flex;
+  align-items: center;
+  padding: 6px 14px;
+  margin-bottom: 10px;
+}
+
+.typing span {
+  width: 7px;
+  height: 7px;
+  margin: 0 2px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, red, yellow, green, blue);
+  animation: pulse 1s infinite alternate;
+}
+
+.hidden {
+  display: none;
+}
+
+@keyframes pulse {
+  from { opacity: .2; transform: translateY(1px); }
+  to { opacity: 1; transform: translateY(-1px); }
+}
+
+
+/* الشريط السفلي (Composer) */
+.composer {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  align-items: center;
+  background: #111;
+  border-top: 1px solid #222;
+}
+
+textarea {
+  flex: 1;
+  font-size: 16px;
+  line-height: 1.4;
+  padding: 10px;
+  border: none;
+  border-radius: 14px;
+  resize: none;
+  outline: none;
+  background: #1c1c1e;
+  color: white;
+  touch-action: manipulation;
+}
