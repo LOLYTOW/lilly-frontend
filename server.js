@@ -1,39 +1,81 @@
+// server.js (محسّن ومترابط)
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import OpenAI from "openai";
+
+// لو كنتِ على Node < 18 واحتجتِ fetch:
+// import fetch from "node-fetch";
 
 dotenv.config();
 
-/* ===================== الإعدادات العامة ===================== */
-const app = express();
+/* ===================== متغيرات البيئة ===================== */
+const PORT  = process.env.PORT || 3000;
+const MODEL = process.env.OPENAI_MODEL || "gpt-4o";
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+const NODE_ENV = process.env.NODE_ENV || "development";
 
-// حجم JSON معقول
-app.use(express.json({ limit: "1mb" }));
-
-// **CORS**: يُفضّل ضبط ALLOWED_ORIGINS بنطاق Vercel الخاص بك (مفصول بفواصل عند تعددها)
+// origins المسموحة (مفصولة بفواصل)
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
   .split(",")
   .map(s => s.trim())
   .filter(Boolean);
 
-// إعداد CORS ديناميكي
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // السماح لطلبات الخوادم/الأدوات التي لا ترسل Origin
-      if (!origin) return callback(null, true);
-      // إن لم تُضبط قائمة السماح، نسمح للجميع (للتجربة فقط)
-      if (ALLOWED_ORIGINS.length === 0) return callback(null, true);
-      // السماح فقط للأصول المحددة
-      if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
-      return callback(new Error("CORS: Origin not allowed"));
-    },
-    methods: ["POST", "GET", "OPTIONS"],
-    allowedHeaders: ["Content-Type"],
-    optionsSuccessStatus: 204
-  })
-);
+// أثناء التطوير، سمحي تلقائيًا لصفحات Live Server
+const DEV_ORIGINS = [
+  "http://127.0.0.1:5500",
+  "http://localhost:5500",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000"
+];
+
+// تنبيه مبكر إن لم يوجد مفتاح
+if (!OPENAI_API_KEY) {
+  console.warn("[WARN] لا يوجد OPENAI_API_KEY في متغيرات البيئة. مسار /api/chat سيعيد خطأ 500 حتى تضيفيه.");
+}
+
+/* ===================== تهيئة التطبيق ===================== */
+const app = express();
+
+// أمن أساسي
+app.use(helmet({
+  // اسمحي للـ fetch من الواجهة عبر المتصفح (CORS يُدار أدناه)
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// قرينة JSON + حد مناسب
+app.use(express.json({ limit: "1mb" }));
+
+// CORS ديناميكي
+const mergedAllowed = new Set([
+  ...ALLOWED_ORIGINS,
+  ...(NODE_ENV === "development" ? DEV_ORIGINS : [])
+]);
+
+app.use(cors({
+  origin: (origin, cb) => {
+    // طلبات أدوات/خوادم بدون Origin
+    if (!origin) return cb(null, true);
+    if (mergedAllowed.size === 0) return cb(null, true); // سماح للجميع إن لم يحدد شيء
+    if (mergedAllowed.has(origin)) return cb(null, true);
+    return cb(new Error("CORS: Origin not allowed"));
+  },
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type"],
+  optionsSuccessStatus: 204
+}));
+
+// Rate Limit (خفيف)
+const limiter = rateLimit({
+  windowMs: 60 * 1000, // دقيقة
+  limit: 60,           // 60 طلبًا/دقيقة لكل IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "تم تجاوز حد الطلبات. أعيدي المحاولة بعد قليل." }
+});
+app.use(limiter);
 
 // تحويل أخطاء CORS إلى JSON ودّي
 app.use((err, req, res, next) => {
@@ -45,57 +87,46 @@ app.use((err, req, res, next) => {
 
 /* ===================== OpenAI Client ===================== */
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: OPENAI_API_KEY
 });
 
-// الموديل الافتراضي — قابل للتعديل عبر .env
-const MODEL = process.env.OPENAI_MODEL || "gpt-4o";
-
-/* ===================== أدوات مساعدة ===================== */
-
-// توليد System Prompt ديناميكي وفق تفضيلات "الشخصية"
+/* ===================== بناء System Prompt ===================== */
 function buildSystemPrompt(persona = {}) {
   const style = persona.style || "friendly";   // formal | friendly | concise | colloquial
   const tone  = persona.tone  || "calm";       // calm | cheerful | pro
   const lang  = persona.lang  || "fusha";      // fusha | ammiyah | english | mixed
   const tutor = !!persona.tutor;
 
-  // اللغة
   let langRule = "اكتبي دائمًا بالعربية الفصحى.";
   if (lang === "ammiyah") langRule = "اكتبي بالعربية العامية بلطف وبأسلوب خليجي خفيف دون مبالغة.";
   if (lang === "english") langRule = "Always respond in natural, clear English.";
   if (lang === "mixed")   langRule = "اكتبي بالعربية، ولا مانع من مزج الإنجليزية عند الحاجة بشكل طبيعي.";
 
-  // الأسلوب
   let styleRule = "أسلوب مختصر، ودود، واضح.";
-  if (style === "formal")    styleRule = "أسلوب رسمي راقٍ، مختصر وواضح.";
-  if (style === "friendly")  styleRule = "أسلوب ودود جدًا، لطيف، مختصر وواضح.";
-  if (style === "concise")   styleRule = "اختصري قدر الإمكان مع وضوح تام ونقاط مرتبة.";
-  if (style === "colloquial")styleRule = "أسلوب محادثي قريب وسلس دون إسهاب.";
+  if (style === "formal")     styleRule = "أسلوب رسمي راقٍ، مختصر وواضح.";
+  if (style === "friendly")   styleRule = "أسلوب ودود جدًا، لطيف، مختصر وواضح.";
+  if (style === "concise")    styleRule = "اختصري قدر الإمكان مع وضوح تام ونقاط مرتبة.";
+  if (style === "colloquial") styleRule = "أسلوب محادثي قريب وسلس دون إسهاب.";
 
-  // النبرة
   let toneRule = "نبرة هادئة مطمئنة.";
-  if (tone === "cheerful") toneRule = "نبرة مرحة خفيفة دون مبالغة.";
+  if (tone === "cheerful") toneRule = "نبرة مرِحة خفيفة دون مبالغة.";
   if (tone === "pro")      toneRule = "نبرة احترافية رزينة.";
 
-  // وضع معلّمة الإنجليزية
   const tutorRule = tutor
     ? `عند كتابة المستخدم بالإنجليزية:
-- قدّمي تصحيحًا لطيفًا في نهاية الرد بعنوان "تصحيح مقترح".
+- قدّمي تصحيحًا لطيفًا بعنوان "تصحيح مقترح".
 - أعطي مثالين بديلين مختصرين.
 - وعند الطلب فقط، قدّمي تمرينًا قصيرًا من سطرين.`
     : "لا تقدّمي تصحيحًا تفصيليًا ما لم يُطلب ذلك.";
 
-  // قواعد ثابتة
   const fixed =
 `- نادي المستخدم دائمًا بـ "مامي".
 - تجنّبي الإيموجي إلا نادرًا.
 - احترمي الخصوصية ولا تطلبي بيانات حساسة.
 - عند الكود: قدّمي الشفرة نظيفة ومباشرة مع شرح سطرين فقط عند اللزوم.`;
 
-  // دمج
   return `
-أنتِ Lilly — سكرتيرة شخصية لمامي لأعمالها العامة والبرمجية.
+أنتِ Lilly — سكرتيرة شخصية لمامي.
 هدفك إرضاؤها وتقديم أفضل مساعدة ممكنة.
 
 ${langRule}
@@ -109,6 +140,10 @@ ${fixed}
 /* ===================== API: Chat ===================== */
 app.post("/api/chat", async (req, res) => {
   try {
+    if (!OPENAI_API_KEY) {
+      return res.status(500).json({ error: "مفتاح OpenAI غير مضبوط في الخادم." });
+    }
+
     const { message, persona, session } = req.body || {};
     if (!message || typeof message !== "string" || message.trim().length === 0) {
       return res.status(400).json({ error: "رسالة المستخدم مطلوبة." });
@@ -116,8 +151,7 @@ app.post("/api/chat", async (req, res) => {
 
     const systemContent = buildSystemPrompt(persona);
 
-    // لا نطبع محتوى المستخدم في السجلات حفاظًا على الخصوصية
-    console.log(`[Lilly] /api/chat — session: ${session || "عام"} — model: ${MODEL}`);
+    console.log(`[Lilly] /api/chat — session=${session || "عام"} — model=${MODEL}`);
 
     const response = await client.chat.completions.create({
       model: MODEL,
@@ -131,18 +165,22 @@ app.post("/api/chat", async (req, res) => {
 
     const reply = response?.choices?.[0]?.message?.content || "";
     return res.json({ reply });
-
   } catch (err) {
     console.error("[Lilly] Chat error:", err?.message || err);
-    return res.status(500).json({ error: "عذرًا مامي، حدث خطأ من المزود." });
+    // رسائل مفيدة حسب نوع الخطأ الشائع
+    const msg = /invalid api key/i.test(String(err))
+      ? "مامي، مفتاح OpenAI غير صحيح لدى الخادم."
+      : /rate limit/i.test(String(err))
+        ? "مامي، تم بلوغ حد المزود مؤقتًا. أعيدي المحاولة بعد قليل."
+        : "عذرًا مامي، حدث خطأ من المزود.";
+    return res.status(500).json({ error: msg });
   }
 });
 
-/* ===================== API: Weather (Proxy خفيف) ===================== */
+/* ===================== API: Weather (Proxy) ===================== */
 /**
- * مزوّد: Open‑Meteo (لا يحتاج مفتاح)
+ * Open‑Meteo (لا يحتاج مفتاح).
  * GET /api/weather?city=Riyadh
- * يمكن لاحقًا توسيع المدن/الإحداثيات من .env أو قاعدة بيانات.
  */
 const CITY_COORDS = {
   Riyadh:  { lat: 24.7136, lon: 46.6753 },
@@ -152,7 +190,6 @@ const CITY_COORDS = {
   Medina:  { lat: 24.5247, lon: 39.5692 }
 };
 
-// وصف مبسّط لرمز الطقس
 const WMO = {
   0: "صحو",
   1: "غائم جزئيًا",
@@ -186,6 +223,7 @@ app.get("/api/weather", async (req, res) => {
     const r = await fetch(url);
     if (!r.ok) throw new Error("Weather HTTP " + r.status);
     const data = await r.json();
+
     const current = data?.current || {};
     const tempC = current.temperature_2m;
     const code = current.weather_code;
@@ -194,18 +232,26 @@ app.get("/api/weather", async (req, res) => {
     return res.json({ city, tempC, desc });
   } catch (err) {
     console.error("[Lilly] Weather error:", err?.message || err);
-    return res.json({ text: "—" }); // فشل صامت ودي
+    return res.json({ text: "—" }); // فشل صامت ودّي
   }
 });
 
 /* ===================== Health ===================== */
 app.get("/health", (req, res) => {
-  res.json({ ok: true, model: MODEL, time: new Date().toISOString() });
+  res.json({ ok: true, model: MODEL, env: NODE_ENV, time: new Date().toISOString() });
+});
+
+/* ===================== 404 & Error Handlers ===================== */
+app.use((req, res) => {
+  res.status(404).json({ error: "المسار غير موجود." });
+});
+
+app.use((err, req, res, next) => {
+  console.error("[Unhandled]", err);
+  res.status(500).json({ error: "حدث خطأ غير متوقَّع في الخادم." });
 });
 
 /* ===================== بدء الخادم ===================== */
-// Render يمرّر المنفذ عبر متغيّر PORT، لذا يجب استخدامه
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`[Lilly] server running on port ${PORT}`);
+  console.log(`[Lilly] server running on http://localhost:${PORT} (env=${NODE_ENV})`);
 });

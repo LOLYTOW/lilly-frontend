@@ -1,8 +1,7 @@
 /****************************************************
- * Lilly — script.js (Full)
+ * Lilly — script.js (Improved)
  * iPhone‑First, Arabic UI, Private Mode, Archive & Search
- * متوافق مع index.html + styles.css الحالية
- * يعمل مع Backend على Render عبر HTTPS
+ * يعمل مع Backend عبر HTTP/HTTPS (محلي أو Render)
  ****************************************************/
 
 /* ===================== عناصر الواجهة الأساسية ===================== */
@@ -52,39 +51,42 @@ const btnAttach = document.getElementById("btn-attach");
 /* ===================== إعداد عنوان السيرفر ===================== */
 /*
   أولوية اختيار رابط الباك-إند:
-  1) window.LILLY_BACKEND (يمكن تعريفه داخل index.html)
+  1) window.LILLY_BACKEND داخل index.html (إن وُجد)
   2) localStorage['LILLY_BACKEND_URL']
-  3) القيمة الافتراضية أدناه (عدّليها لرابطك على Render)
+  3) القيمة الافتراضية أدناه
 */
 const BACKEND_URL_DEFAULT = "https://lilly-server-rns9.onrender.com";
-const BACKEND_URL =
-  (typeof window !== "undefined" && window.LILLY_BACKEND) ||
-  (typeof window !== "undefined" && localStorage.getItem("LILLY_BACKEND_URL")) ||
-  BACKEND_URL_DEFAULT;
+function getBackendUrl() {
+  try {
+    if (typeof window !== "undefined" && window.LILLY_BACKEND) return window.LILLY_BACKEND;
+    const fromLS = typeof window !== "undefined" ? localStorage.getItem("LILLY_BACKEND_URL") : null;
+    return fromLS || BACKEND_URL_DEFAULT;
+  } catch { return BACKEND_URL_DEFAULT; }
+}
+let BACKEND_URL = getBackendUrl();
 
 function backendConfigured() {
-  return !/xxxxx/.test(BACKEND_URL);
+  return typeof BACKEND_URL === "string" && BACKEND_URL.startsWith("http");
 }
 
 /* ===================== تهيئة iPhone ===================== */
-/** ضبط ارتفاع خانة الإدخال تلقائيًا وسكروول آمن */
 function autoGrow() {
+  if (!input) return;
   input.style.height = "auto";
   input.style.height = Math.min(input.scrollHeight, 140) + "px";
   chat.style.scrollPaddingBottom = "150px";
   chat.scrollTop = chat.scrollHeight;
 }
-input.addEventListener("input", autoGrow);
+input?.addEventListener("input", autoGrow);
 autoGrow();
 
-/** رفع الـ composer فوق الكيبورد في iOS عبر visualViewport */
 (function setupViewportFix() {
   if (!window.visualViewport) return;
   const composer = document.querySelector(".composer");
   function fixKeyboard() {
     const vp = window.visualViewport;
     const offset = Math.max(0, window.innerHeight - vp.height);
-    composer.style.transform = `translateY(-${offset}px)`;
+    if (composer) composer.style.transform = `translateY(-${offset}px)`;
     chat.style.paddingBottom = offset + 150 + "px";
     chat.scrollTop = chat.scrollHeight;
   }
@@ -93,12 +95,10 @@ autoGrow();
 })();
 
 /* ===================== وظائف عامة ===================== */
-/** تمرير لأسفل الدردشة */
 function scrollToBottom() {
   chat.scrollTop = chat.scrollHeight;
 }
 
-/** تنسيق الوقت 12‑ساعة بعلامات (ص/م) حسب رغبة مامي */
 function formatTime12(date = new Date()) {
   let hours = date.getHours();
   const minutes = date.getMinutes().toString().padStart(2, "0");
@@ -108,7 +108,6 @@ function formatTime12(date = new Date()) {
   return `${hours}:${minutes} ${suffix}`;
 }
 
-/** إنشاء عنصر فقاعة برسالة + وقت داخلي */
 function createBubble(text, sender = "user", time = new Date()) {
   const wrapper = document.createElement("div");
   wrapper.className = `message ${sender}`;
@@ -128,7 +127,6 @@ function createBubble(text, sender = "user", time = new Date()) {
   return wrapper;
 }
 
-/** إضافة رسالة إلى الدردشة */
 function addMsg(text, sender = "user", time = new Date()) {
   const bubble = createBubble(text, sender, time);
   chat.appendChild(bubble);
@@ -136,17 +134,16 @@ function addMsg(text, sender = "user", time = new Date()) {
   return bubble;
 }
 
-/** مؤشر الكتابة */
 function showTyping() {
-  typing.classList.remove("hidden");
+  typing?.classList.remove("hidden");
   scrollToBottom();
 }
 function hideTyping() {
-  typing.classList.add("hidden");
+  typing?.classList.add("hidden");
 }
 
-/** جلب نص الإدخال */
 function takeInputText() {
+  if (!input) return null;
   const txt = (input.value || "").trim();
   if (!txt) return null;
   input.value = "";
@@ -155,14 +152,17 @@ function takeInputText() {
 }
 
 /* ===================== إدارة الإعدادات Overlay ===================== */
-btnSettings.addEventListener("click", () => {
-  settingsOverlay.classList.remove("hidden");
+btnSettings?.addEventListener("click", () => {
+  settingsOverlay?.classList.remove("hidden");
 });
-btnSettingsClose.addEventListener("click", () => {
-  settingsOverlay.classList.add("hidden");
+btnSettingsClose?.addEventListener("click", () => {
+  settingsOverlay?.classList.add("hidden");
 });
-settingsBackdrop.addEventListener("click", () => {
-  settingsOverlay.classList.add("hidden");
+settingsBackdrop?.addEventListener("click", () => {
+  settingsOverlay?.classList.add("hidden");
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") settingsOverlay?.classList.add("hidden");
 });
 
 /* التبويبات */
@@ -171,13 +171,13 @@ tabs.forEach((tab) => {
     tabs.forEach((t) => t.classList.remove("is-active"));
     tab.classList.add("is-active");
     tabPanels.forEach((panel) => panel.classList.remove("is-active"));
-    document.getElementById(`tab-${tab.dataset.tab}`).classList.add("is-active");
+    document.getElementById(`tab-${tab.dataset.tab}`)?.classList.add("is-active");
   });
 });
 
 /* ===================== تفضيلات مامي (محليًا) ===================== */
-const PREFS_KEY = "LILLY_PREFS";
-const MEMOS_KEY = "LILLY_MEMOS";
+const PREFS_KEY   = "LILLY_PREFS";
+const MEMOS_KEY   = "LILLY_MEMOS";
 const SESSION_KEY = "LILLY_SESSION"; // اسم الجلسة الحالية (افتراضيًا: "عام")
 
 function loadPrefs() {
@@ -191,23 +191,20 @@ function savePrefs(p) {
   localStorage.setItem(PREFS_KEY, JSON.stringify(p));
 }
 
-/** استرجاع التفضيلات أو إنشاء افتراضيات */
 const prefs = loadPrefs() || {
   persona: { style: "friendly", tone: "calm", lang: "fusha", tutor: false },
   privateMode: false,
-  session: "عام" // الجلسة الافتراضية
+  session: "عام"
 };
 
-/* ربط الحقول بقيم التفضيلات */
-personaStyleSel.value = prefs.persona.style;
-personaToneSel.value  = prefs.persona.tone;
-personaLangSel.value  = prefs.persona.lang;
-tutorModeChk.checked  = !!prefs.persona.tutor;
-privateToggle.checked = !!prefs.privateMode;
+personaStyleSel && (personaStyleSel.value = prefs.persona.style);
+personaToneSel  && (personaToneSel.value  = prefs.persona.tone);
+personaLangSel  && (personaLangSel.value  = prefs.persona.lang);
+tutorModeChk    && (tutorModeChk.checked  = !!prefs.persona.tutor);
+privateToggle   && (privateToggle.checked = !!prefs.privateMode);
 
-/* حفظ تلقائي عند التغيير */
 [personaStyleSel, personaToneSel, personaLangSel, tutorModeChk].forEach(el => {
-  el.addEventListener("change", () => {
+  el?.addEventListener("change", () => {
     prefs.persona = {
       style: personaStyleSel.value,
       tone:  personaToneSel.value,
@@ -217,7 +214,7 @@ privateToggle.checked = !!prefs.privateMode;
     savePrefs(prefs);
   });
 });
-privateToggle.addEventListener("change", () => {
+privateToggle?.addEventListener("change", () => {
   prefs.privateMode = !!privateToggle.checked;
   savePrefs(prefs);
   handlePrivateToggle();
@@ -226,13 +223,11 @@ privateToggle.addEventListener("change", () => {
 /* ===================== Private Message ===================== */
 function handlePrivateToggle() {
   if (prefs.privateMode) {
-    // وضع خاص: لا حفظ للرسائل + مسح الدردشة لبدء صفحة خاصة
     chat.innerHTML = "";
     addMsg("تم تفعيل الوضع الخاص. لن تُحفَظ أي رسالة، وستُنسى هذه الصفحة عند الإغلاق.", "lilly");
   } else {
     chat.innerHTML = "";
     addMsg("تم إيقاف الوضع الخاص. عادت المحادثات إلى الوضع العادي مع الحفظ.", "lilly");
-    // تحميل أحدث الرسائل من الأرشيف (لإعطاء سياق بصري)
     loadRecentFromArchive();
   }
 }
@@ -251,41 +246,32 @@ function openDB() {
         const store = db.createObjectStore("messages", { keyPath: "id", autoIncrement: true });
         store.createIndex("ts", "ts", { unique: false });
         store.createIndex("session", "session", { unique: false });
-        store.createIndex("session_ts", "session_ts", { unique: false }); // لجلب أحدث رسائل الجلسة
+        store.createIndex("session_ts", "session_ts", { unique: false });
       }
     };
     req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    req.onerror   = () => reject(req.error);
   });
 }
 
-/** فتح القاعدة إن لم تكن مفتوحة */
 async function ensureDB() {
   if (db) return db;
   db = await openDB();
   return db;
 }
 
-/** حفظ رسالة (إن لم يكن الوضع الخاص مفعّلًا) */
 async function archiveSave({ session, sender, text, ts }) {
-  if (prefs.privateMode) return; // في الوضع الخاص لا نحفظ
+  if (prefs.privateMode) return;
   const database = await ensureDB();
   return new Promise((resolve, reject) => {
     const tx = database.transaction("messages", "readwrite");
     const store = tx.objectStore("messages");
-    store.add({
-      session,
-      sender,
-      text,
-      ts,
-      session_ts: `${session}_${ts}`
-    });
+    store.add({ session, sender, text, ts, session_ts: `${session}_${ts}` });
     tx.oncomplete = () => resolve(true);
-    tx.onerror = () => reject(tx.error);
+    tx.onerror    = () => reject(tx.error);
   });
 }
 
-/** جلب آخر N رسائل للجلسة الحالية */
 async function archiveLoadRecent(session, limit = 50) {
   const database = await ensureDB();
   return new Promise((resolve, reject) => {
@@ -295,7 +281,7 @@ async function archiveLoadRecent(session, limit = 50) {
     const items = [];
     req.onsuccess = (ev) => {
       const cursor = ev.target.result;
-      if (cursor && items.length < 500) { // فِلتر بالجلسة ثم نقطع عند limit
+      if (cursor && items.length < 500) {
         const v = cursor.value;
         if (v.session === session) items.push(v);
         cursor.continue();
@@ -307,7 +293,6 @@ async function archiveLoadRecent(session, limit = 50) {
   });
 }
 
-/** بحث نصّي بسيط عبر جميع الرسائل (كل الجلسات) */
 async function archiveSearch(query, max = 100) {
   const q = (query || "").trim().toLowerCase();
   if (!q) return [];
@@ -322,9 +307,7 @@ async function archiveSearch(query, max = 100) {
       if (!cursor) return resolve(results);
       const v = cursor.value;
       if (results.length < max) {
-        if ((v.text || "").toLowerCase().includes(q)) {
-          results.push(v);
-        }
+        if ((v.text || "").toLowerCase().includes(q)) results.push(v);
         cursor.continue();
       } else {
         resolve(results);
@@ -334,18 +317,14 @@ async function archiveSearch(query, max = 100) {
   });
 }
 
-/** تحميل آخر رسائل من الأرشيف إلى الشاشة */
 async function loadRecentFromArchive() {
   if (prefs.privateMode) return;
   const session = prefs.session || "عام";
   const items = await archiveLoadRecent(session, 50);
   chat.innerHTML = "";
-  for (const m of items) {
-    addMsg(m.text, m.sender, new Date(m.ts));
-  }
+  for (const m of items) addMsg(m.text, m.sender, new Date(m.ts));
 }
 
-/** تصدير الأرشيف ملف JSON */
 async function exportArchive() {
   const database = await ensureDB();
   return new Promise((resolve, reject) => {
@@ -355,10 +334,8 @@ async function exportArchive() {
     const arr = [];
     req.onsuccess = (ev) => {
       const cursor = ev.target.result;
-      if (cursor) {
-        arr.push(cursor.value);
-        cursor.continue();
-      } else {
+      if (cursor) { arr.push(cursor.value); cursor.continue(); }
+      else {
         const blob = new Blob([JSON.stringify(arr, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -373,7 +350,6 @@ async function exportArchive() {
   });
 }
 
-/** استيراد أرشيف JSON */
 async function importArchive(file) {
   const text = await file.text();
   const data = JSON.parse(text);
@@ -382,7 +358,6 @@ async function importArchive(file) {
     const tx = database.transaction("messages", "readwrite");
     const store = tx.objectStore("messages");
     for (const m of data) {
-      // ادخلي كما هي — إن وجد id سيتجاهله keyPath autoIncrement ويولّد جديدًا
       store.add({
         session: m.session || "عام",
         sender:  m.sender  || "lilly",
@@ -392,11 +367,10 @@ async function importArchive(file) {
       });
     }
     tx.oncomplete = () => resolve(true);
-    tx.onerror = () => reject(tx.error);
+    tx.onerror    = () => reject(tx.error);
   });
 }
 
-/** تفريغ الأرشيف كاملًا */
 async function purgeArchive() {
   const database = await ensureDB();
   return new Promise((resolve, reject) => {
@@ -410,12 +384,8 @@ async function purgeArchive() {
 
 /* أزرار الأرشيف */
 btnExportArchive?.addEventListener("click", async () => {
-  try {
-    await exportArchive();
-    addMsg("تم تصدير الأرشيف بنجاح يا مامي.", "lilly");
-  } catch {
-    addMsg("تعذر تصدير الأرشيف.", "lilly");
-  }
+  try { await exportArchive(); addMsg("تم تصدير الأرشيف بنجاح يا مامي.", "lilly"); }
+  catch { addMsg("تعذر تصدير الأرشيف.", "lilly"); }
 });
 btnImportArchive?.addEventListener("click", () => {
   importFileInput?.click();
@@ -446,9 +416,8 @@ btnPurgeArchive?.addEventListener("click", async () => {
 
 /* ===================== ذكريات مخصّصة (محليًا) ===================== */
 function loadMemos() {
-  try {
-    return JSON.parse(localStorage.getItem(MEMOS_KEY) || "[]");
-  } catch { return []; }
+  try { return JSON.parse(localStorage.getItem(MEMOS_KEY) || "[]"); }
+  catch { return []; }
 }
 function saveMemos(arr) {
   localStorage.setItem(MEMOS_KEY, JSON.stringify(arr));
@@ -509,13 +478,11 @@ function renderSearchResults(q, items) {
 /* ===================== التاريخ الهجري + الطقس ===================== */
 function updateHijri() {
   try {
-    // تقويم إسلامي عبر Intl (يعتمد على دعم النظام)
     const s = new Intl.DateTimeFormat("ar-SA-u-ca-islamic", {
       weekday: "short", month: "short", day: "numeric"
     }).format(new Date());
     hijriEl.textContent = s;
   } catch {
-    // احتياطي
     hijriEl.textContent = new Date().toLocaleDateString("ar-SA", {
       weekday: "short", month: "short", day: "numeric"
     });
@@ -523,13 +490,12 @@ function updateHijri() {
 }
 updateHijri();
 
-/** جلب الطقس عبر الباك‑إند (سيُضاف مسار /api/weather لاحقًا) */
+/** جلب الطقس عبر الباك‑إند (Open‑Meteo Proxy) */
 async function updateWeather() {
   try {
     const res = await fetch(`${BACKEND_URL}/api/weather?city=Riyadh`, { method: "GET" });
     if (!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
-    // نتوقع { tempC, desc } أو { text } — نجمعها بشكل ودّي
     if (data.tempC != null && data.desc) {
       weatherEl.textContent = `${Math.round(data.tempC)}° ${data.desc}`;
     } else if (data.text) {
@@ -538,14 +504,27 @@ async function updateWeather() {
       weatherEl.textContent = "طقس";
     }
   } catch {
-    // إبقاء الشرطة "—" إن تعذّر
+    // نترك الشرطة "—"
   }
 }
 updateWeather();
 
 /* ===================== الإرسال إلى Lilly (السيرفر) ===================== */
+function withTimeout(ms) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  return { signal: controller.signal, cancel: () => clearTimeout(id) };
+}
+
+let sending = false;
+
 async function sendToLilly(userText) {
+  if (sending) return; // منع ضغطات مزدوجة
+  sending = true;
+  send?.setAttribute("disabled", "true");
   showTyping();
+
+  const { signal, cancel } = withTimeout(25000);
 
   try {
     const res = await fetch(`${BACKEND_URL}/api/chat`, {
@@ -560,36 +539,41 @@ async function sendToLilly(userText) {
           tutor: !!prefs.persona.tutor
         },
         session: prefs.session || "عام"
-      })
+      }),
+      signal
     });
 
     let data = null;
     try { data = await res.json(); } catch { data = null; }
 
-    hideTyping();
-
-    if (res.ok && data && data.reply) {
-      addMsg(data.reply, "lilly");
-      await archiveSave({ session: prefs.session || "عام", sender: "lilly", text: data.reply, ts: Date.now() });
+    if (res.ok && data && (data.reply || data.message || data.text)) {
+      const reply = data.reply ?? data.message ?? data.text ?? "";
+      addMsg(reply, "lilly");
+      await archiveSave({ session: prefs.session || "عام", sender: "lilly", text: reply, ts: Date.now() });
     } else {
-      const msg =
-        data && data.error
-          ? `مامي، حدث خطأ من الخادم: ${data.error}`
-          : `مامي، لم أفهم رد الخادم. (HTTP ${res.status})`;
+      const msg = data && data.error
+        ? `مامي، حدث خطأ من الخادم: ${data.error}`
+        : `مامي، لم أفهم رد الخادم. (HTTP ${res.status})`;
       addMsg(msg, "lilly");
       await archiveSave({ session: prefs.session || "عام", sender: "lilly", text: msg, ts: Date.now() });
     }
   } catch (err) {
-    hideTyping();
-    const msg = "مامي، لا يوجد اتصال بالخادم الآن.";
+    const msg = err?.name === "AbortError"
+      ? "مامي، الخادم تأخر بالرد (انتهت مهلة الاتصال)."
+      : "مامي، لا يوجد اتصال بالخادم الآن.";
     addMsg(msg, "lilly");
     console.error("Network error:", err);
     await archiveSave({ session: prefs.session || "عام", sender: "lilly", text: msg, ts: Date.now() });
+  } finally {
+    cancel();
+    hideTyping();
+    sending = false;
+    send?.removeAttribute("disabled");
   }
 }
 
 /* ===================== ربط الإرسال ===================== */
-send.addEventListener("click", async () => {
+send?.addEventListener("click", async () => {
   const txt = takeInputText();
   if (!txt) return;
   addMsg(txt, "user");
@@ -597,7 +581,7 @@ send.addEventListener("click", async () => {
   sendToLilly(txt);
 });
 
-input.addEventListener("keydown", async (e) => {
+input?.addEventListener("keydown", async (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     const txt = takeInputText();
@@ -612,12 +596,11 @@ input.addEventListener("keydown", async (e) => {
 (async function boot() {
   if (!backendConfigured()) {
     addMsg(
-      "مامي، رجاءً ضعي رابط السيرفر من Render في window.LILLY_BACKEND أو LILLY_BACKEND_URL.",
+      "مامي، رجاءً ضعي رابط السيرفر في window.LILLY_BACKEND أو LILLY_BACKEND_URL.",
       "lilly"
     );
   }
 
-  // تحميل آخر رسائل الجلسة ما لم يكن الوضع الخاص
   await ensureDB();
   if (!prefs.privateMode) {
     await loadRecentFromArchive();
@@ -630,10 +613,3 @@ input.addEventListener("keydown", async (e) => {
 btnAttach?.addEventListener("click", () => {
   addMsg("زر المرفقات شكلي حالياً يا مامي.", "lilly");
 });
-
-/* ===================== ملاحظات =====================
-- هذا الملف لا يغيّر أي شيء في الباك‑إند سوى أنه يرسل كائن persona + session.
-- في الخطوة التالية سنحدّث server.js ليدمج خيارات الشخصية في الـ System Prompt،
-  ونضيف مسار /api/weather (Proxy) مع مفتاح خدمة الطقس في .env (اختياري).
-- كل الحفظ/البحث/الأرشفة يتم محليًا على جهازك عبر IndexedDB.
-**************************************************** */

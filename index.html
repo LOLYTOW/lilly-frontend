@@ -2,46 +2,38 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <!-- iPhone-first + safe area -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <meta name="theme-color" content="#0a0a0b" />
   <title>Lilly</title>
 
-  <!-- أيقونة (اختياري) -->
-  <!-- <link rel="icon" href="/favicon.ico" /> -->
-
-  <!-- CSS الرئيسي -->
+  <!-- رابط ملف CSS -->
   <link rel="stylesheet" href="styles.css" />
 
-  <!-- تعيين رابط الباك-إند (اختياري) -->
-  <!-- <script>window.LILLY_BACKEND = "https://lilly-server-rns9.onrender.com";</script> -->
+  <!-- يمكن وضع رابط السيرفر هنا إن رغبتِ -->
+  <!-- <script>window.LILLY_BACKEND = "http://localhost:3000";</script> -->
 </head>
 
 <body>
   <!-- ======= الهيدر ======= -->
-  <header class="top-header" role="banner">
-    <!-- يسار: زر إعدادات فعّال -->
-    <button id="btn-settings" class="icon-btn" aria-label="الإعدادات" title="الإعدادات">
-      <!-- أيقونة ترس -->
-      <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+  <header class="top-header">
+    <button id="btn-settings" class="icon-btn" aria-label="الإعدادات">
+      <svg width="24" height="24" viewBox="0 0 24 24">
         <path fill="currentColor"
           d="M12 8a4 4 0 100 8 4 4 0 000-8zm9.4 4a7.4 7.4 0 00-.12-1.33l2.02-1.57-1.9-3.29-2.46 1a7.62 7.62 0 00-2.3-1.34l-.35-2.62H9.73l-.36 2.62a7.62 7.62 0 00-2.3 1.34l-2.46-1-1.9 3.29 2.02 1.57A7.42 7.42 0 004.6 12c0 .45.04.89.12 1.33L2.7 14.9l1.9 3.28 2.46-1c.7.57 1.48 1 2.3 1.34l.36 2.63h4.14l.35-2.63c.82-.34 1.6-.77 2.3-1.34l2.46 1 1.9-3.28-2.02-1.57c.08-.44.12-.88.12-1.33z"/>
       </svg>
     </button>
 
-    <!-- الوسط: الاسم + التاريخ الهجري + الطقس -->
     <div class="title-block">
       <div class="name">Lilly</div>
       <div class="sub">
-        <span id="hijri-date">—</span>
-        •
+        <span id="hijri-date">—</span> •
         <span id="weather">—</span>
       </div>
     </div>
 
-    <!-- يمين: أيقونة Wi‑Fi شكلية (غير تفاعلية) -->
-    <div class="right-icons" aria-hidden="true">
-      <span class="wifi-icon" title="اتصال عبر الواي فاي (شكلي)">
-        <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+    <div class="right-icons">
+      <span class="wifi-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24">
           <path fill="currentColor"
             d="M12 18a2 2 0 100 4 2 2 0 000-4zm-6.64-5.36l1.41 1.41A7 7 0 0112 12a7 7 0 014.95 2.05l1.41-1.41A8.99 8.99 0 0012 10c-2.42 0-4.62.98-6.64 2.64zM2.1 8.1l1.41 1.41A13 13 0 0112 6c3.46 0 6.61 1.35 8.49 3.51l1.41-1.41A14.98 14.98 0 0012 4C7.76 4 4 5.64 2.1 8.1z"/>
         </svg>
@@ -49,62 +41,44 @@
     </div>
   </header>
 
-  <!-- ======= منطقة الدردشة ======= -->
-  <main id="chat" role="main" aria-live="polite"></main>
+  <!-- ======= الدردشة ======= -->
+  <main id="chat"></main>
 
-  <!-- ======= مؤشر الكتابة ======= -->
-  <div id="typing" class="typing hidden" aria-hidden="true">
+  <!-- مؤشر الكتابة -->
+  <div id="typing" class="typing hidden">
     <span></span><span></span><span></span><span></span><span></span>
   </div>
 
-  <!-- ======= المؤلف (Composer) ======= -->
-  <footer class="composer" role="contentinfo">
-    <!-- زر ملفات (شكلي) -->
-    <button id="btn-attach" class="icon-btn" aria-label="مشاركة ملفات (شكلي)" title="مشاركة ملفات (شكلي)">
-      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-        <path fill="currentColor"
-          d="M16.5 6.5v9a4.5 4.5 0 01-9 0v-10a3 3 0 016 0v9a1.5 1.5 0 01-3 0V7h-1.5v7.5a3 3 0 006 0v-9a4.5 4.5 0 00-9 0v10a6 6 0 0012 0v-8.5h-1.5z"/>
-      </svg>
-    </button>
+  <!-- ======= المؤلف ======= -->
+  <footer class="composer">
+    <button id="btn-attach" class="icon-btn">📎</button>
 
-    <!-- حقل الإدخال -->
-    <textarea id="input" placeholder="اكتبي رسالة" rows="1" aria-label="اكتبي رسالتك هنا"></textarea>
+    <textarea id="input" placeholder="اكتبي رسالة…" rows="1"></textarea>
 
-    <!-- زر مايك (شكلي) -->
-    <button class="mic" aria-label="تسجيل صوتي (شكلي)" title="تسجيل صوتي (شكلي)">🎤</button>
-
-    <!-- زر إرسال -->
-    <button id="send" class="send" aria-label="إرسال" title="إرسال">➤</button>
+    <button class="mic">🎤</button>
+    <button id="send" class="send">➤</button>
   </footer>
 
-  <!-- ======= صفحة الإعدادات (Overlay) ======= -->
-  <section id="settings-overlay" class="settings hidden" aria-hidden="true" aria-labelledby="settings-title">
-    <div class="settings__panel" role="dialog" aria-modal="true">
-      <!-- رأس الإعدادات -->
+  <!-- ======= الإعدادات ======= -->
+  <section id="settings-overlay" class="settings hidden">
+    <div class="settings__panel">
       <header class="settings__header">
-        <h2 id="settings-title">الإعدادات</h2>
-        <button id="btn-settings-close" class="icon-btn" aria-label="إغلاق الإعدادات" title="إغلاق">
-          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-            <path fill="currentColor"
-              d="M18.3 5.71L12 12l6.3 6.29-1.41 1.42L10.59 13.4 4.3 19.71 2.89 18.3 9.17 12 2.89 5.71 4.3 4.29l6.29 6.3 6.29-6.3 1.42 1.42z"/>
-          </svg>
-        </button>
+        <h2>الإعدادات</h2>
+        <button id="btn-settings-close" class="icon-btn">✕</button>
       </header>
 
-      <!-- تبويبات -->
-      <nav class="settings__tabs" aria-label="أقسام الإعدادات">
-        <button class="tab is-active" data-tab="persona" id="tabbtn-persona">الشخصية</button>
-        <button class="tab" data-tab="memory" id="tabbtn-memory">الذاكرة</button>
-        <button class="tab" data-tab="search" id="tabbtn-search">بحث</button>
+      <nav class="settings__tabs">
+        <button class="tab is-active" data-tab="persona">الشخصية</button>
+        <button class="tab" data-tab="memory">الذاكرة</button>
+        <button class="tab" data-tab="search">بحث</button>
       </nav>
 
       <div class="settings__content">
-        <!-- تبويب: إدارة الشخصية -->
-        <section class="tab-panel is-active" id="tab-persona" role="region" aria-labelledby="tabbtn-persona">
+        <section class="tab-panel is-active" id="tab-persona">
           <h3 class="section-title">إدارة شخصية Lilly</h3>
 
           <div class="field">
-            <label for="persona-style">الشخصية</label>
+            <label>الشخصية</label>
             <select id="persona-style">
               <option value="formal">رسمية</option>
               <option value="friendly" selected>ودودة</option>
@@ -114,7 +88,7 @@
           </div>
 
           <div class="field">
-            <label for="persona-tone">نبرة الصوت</label>
+            <label>نبرة الصوت</label>
             <select id="persona-tone">
               <option value="calm" selected>هادئة</option>
               <option value="cheerful">مرِحة</option>
@@ -123,7 +97,7 @@
           </div>
 
           <div class="field">
-            <label for="persona-lang">أسلوب اللغة</label>
+            <label>أسلوب اللغة</label>
             <select id="persona-lang">
               <option value="fusha" selected>فصحى</option>
               <option value="ammiyah">عامية</option>
@@ -135,61 +109,55 @@
           <div class="field">
             <label class="checkbox">
               <input type="checkbox" id="tutor-mode" />
-              تفعيل وضع معلّمة الإنجليزية (تصحيح لطيف وتمارين قصيرة)
+              تفعيل وضع معلّمة الإنجليزية
             </label>
           </div>
         </section>
 
-        <!-- تبويب: الذاكرة -->
-        <section class="tab-panel" id="tab-memory" role="region" aria-labelledby="tabbtn-memory">
+        <section class="tab-panel" id="tab-memory">
           <h3 class="section-title">الذاكرة</h3>
 
           <div class="memory-actions">
             <button id="btn-memory-add" class="btn">إضافة ذكرى</button>
             <button id="btn-memory-view" class="btn">عرض الذكريات</button>
-            <button id="btn-memory-clear" class="btn btn--danger">محو الذاكرة</button>
+            <button id="btn-memory-clear" class="btn btn--danger">مسح الذكريات</button>
           </div>
 
-          <!-- Private Message -->
           <div class="private-box">
             <h4>Private Message</h4>
-            <p>تفعيل صفحة خاصة لا تُحفَظ محادثاتها وتُنسى عند الإغلاق.</p>
+            <p>لن تُحفَظ المحادثة في هذا الوضع.</p>
             <label class="switch">
               <input type="checkbox" id="private-mode-toggle" />
               <span class="slider"></span>
             </label>
           </div>
 
-          <!-- إدارة الأرشيف المحلي -->
           <div class="archive-box">
-            <h4>أرشيف المحادثات</h4>
+            <h4>الأرشيف</h4>
             <div class="archive-actions">
-              <button id="btn-export-archive" class="btn">تصدير أرشيف</button>
-              <button id="btn-import-archive" class="btn">استيراد أرشيف</button>
-              <button id="btn-purge-archive" class="btn btn--danger">تفريغ الأرشيف</button>
+              <button id="btn-export-archive" class="btn">تصدير</button>
+              <button id="btn-import-archive" class="btn">استيراد</button>
+              <button id="btn-purge-archive" class="btn btn--danger">تفريغ</button>
             </div>
-            <p class="hint">يُحفظ الأرشيف على جهازك فقط، ولن يُرفع إلى السيرفر.</p>
-            <input id="import-file" type="file" accept=".json" hidden />
+            <input id="import-file" type="file" hidden />
           </div>
         </section>
 
-        <!-- تبويب: البحث -->
-        <section class="tab-panel" id="tab-search" role="region" aria-labelledby="tabbtn-search">
-          <h3 class="section-title">البحث داخل المحادثة</h3>
-
+        <section class="tab-panel" id="tab-search">
+          <h3 class="section-title">بحث</h3>
           <div class="search-row">
-            <input id="search-input" type="search" placeholder="ابحثي في كل الرسائل…" aria-label="بحث" />
+            <input id="search-input" type="search" placeholder="ابحثي…" />
             <button id="btn-search" class="btn">بحث</button>
           </div>
-
-          <div id="search-results" class="search-results" role="list" aria-live="polite">
-            <!-- تُعرض النتائج هنا -->
-          </div>
+          <div id="search-results" class="search-results"></div>
         </section>
       </div>
     </div>
 
-    <!-- خلفية لإغلاق الإعدادات عند النقر -->
-    <button id="settings-backdrop" class="settings__backdrop" aria-label="إغلاق"></button>
- /body>
+    <button id="settings-backdrop" class="settings__backdrop"></button>
+  </section>
+
+  <!-- تحميل سكربت الواجهة -->
+  <script src="script.js" defer></script>
+</body>
 </html>
